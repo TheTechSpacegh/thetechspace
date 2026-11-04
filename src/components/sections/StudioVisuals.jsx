@@ -180,13 +180,14 @@ export function ProjectThread({ team }) {
   const reduce = useReducedMotion();
   const [shown, setShown] = useState(reduce ? thread.length : 1);
 
+  const total = thread.length;
   useEffect(() => {
     if (reduce) return;
     // Reveal one message at a time, hold the full thread, then start over.
-    const done = shown >= thread.length;
+    const done = shown >= total;
     const id = setTimeout(() => setShown(done ? 1 : shown + 1), done ? 5000 : STEP_MS);
     return () => clearTimeout(id);
-  }, [shown, reduce]);
+  }, [shown, reduce, total]);
 
   const typing = !reduce && shown < thread.length ? thread[shown] : null;
 

@@ -1,12 +1,30 @@
 version: 2
 updates:
-  # One grouped PR a week instead of one per package.
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
     groups:
+      # Vite and its plugins must move together: a Vite major needs matching
+      # @vitejs/plugin-react and @tailwindcss/vite releases, or `npm ci` fails
+      # on peer dependencies. Listed first so these never land in the
+      # catch-all group below. Includes majors.
+      vite:
+        patterns:
+          - "vite"
+          - "@vitejs/*"
+          - "@tailwindcss/vite"
+          - "tailwindcss"
+      # React and its type packages also move as one.
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+      # Everything else: one grouped PR a week for non-breaking updates.
+      # Majors outside the groups above still get their own PR.
       minor-and-patch:
         update-types: [minor, patch]
 

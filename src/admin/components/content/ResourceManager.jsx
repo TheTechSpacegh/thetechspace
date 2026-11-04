@@ -20,7 +20,8 @@ import { API_URL, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useResource } from "../../hooks/useResource";
 import BackendRequired from "./BackendRequired";
-import ResourceForm, { toFormValues, toPayload } from "./ResourceForm";
+import ResourceForm from "./ResourceForm";
+import { toFormValues, toPayload } from "../../lib/form-values";
 
 export default function ResourceManager({ config }) {
   const [filter, setFilter] = useState(config.filters?.[0]?.value ?? "");
