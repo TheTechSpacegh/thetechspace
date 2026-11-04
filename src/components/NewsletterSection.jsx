@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Send, Loader2, CheckCircle2 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
+import { api } from "@/lib/api";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -35,8 +36,8 @@ function NewsletterSignup({ onSubmit }) {
                 origin: { y: 0.6 },
                 disableForReducedMotion: true,
             });
-        } catch {
-            setError("We couldn't subscribe you just now. Please try again in a moment.");
+        } catch (err) {
+            setError(err.fields?.email?.[0] ?? "We couldn't subscribe you just now. Please try again in a moment.");
         } finally {
             setIsSubmitting(false);
         }
@@ -109,8 +110,7 @@ function NewsletterSignup({ onSubmit }) {
 // Wrapper that provides the onSubmit handler and section layout
 export default function NewsletterSection() {
     const handleSubmit = async (email) => {
-        // TODO: wire up to your email service (e.g. Mailchimp, ConvertKit, Supabase)
-        console.log("Newsletter signup:", email);
+        await api("/api/newsletter/subscribe", { method: "POST", body: { email } });
     };
 
     return (

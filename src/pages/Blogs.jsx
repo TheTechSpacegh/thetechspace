@@ -4,15 +4,15 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { motion } from "motion/react";
 import { ArrowUpRight, Clock } from "lucide-react";
-import { blogPosts } from "../data/blogsData";
+import { usePosts } from "@/lib/content";
+import MediaImage from "@/components/ui/MediaImage";
+import ContentSkeleton from "@/components/ui/ContentSkeleton";
 import PageHeader from "../components/ui/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { FinalCta } from "../components/home/PeopleAndLabs";
 import { FeaturedPostCard } from "@/components/sections/HeroVisuals";
-
-const categories = ["All", ...new Set(blogPosts.map((p) => p.category))];
 
 function PostCard({ post, lead, index }) {
   return (
@@ -27,9 +27,9 @@ function PostCard({ post, lead, index }) {
         <Card className="h-full gap-0 overflow-hidden rounded-2xl p-0 shadow-none transition-shadow duration-300 group-hover:shadow-lg">
           <CardContent className="flex h-full flex-col p-0">
             <div className={`relative w-full overflow-hidden bg-muted ${lead ? "aspect-video sm:aspect-auto sm:h-96" : "aspect-[16/10]"}`}>
-              <img
+              <MediaImage
                 src={post.image}
-                alt=""
+                label={post.title}
                 loading={index === 0 ? "eager" : "lazy"}
                 className="h-full w-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-105"
               />
@@ -61,7 +61,9 @@ function PostCard({ post, lead, index }) {
 
 export default function BlogPage() {
   const [active, setActive] = useState("All");
-  const ordered = [...blogPosts].sort((a, b) => Number(b.featured) - Number(a.featured));
+  const blogPosts = usePosts();
+  const categories = ["All", ...new Set((blogPosts ?? []).map((p) => p.category))];
+  const ordered = [...(blogPosts ?? [])].sort((a, b) => Number(b.featured) - Number(a.featured));
   const posts = ordered.filter((p) => active === "All" || p.category === active);
 
   return (
@@ -71,7 +73,7 @@ export default function BlogPage() {
         badge="Insights"
         title="Insights from the studio."
         lede="Tutorials, ideas and the latest in tech, design and growth, straight from our team."
-        aside={<FeaturedPostCard post={blogPosts.find((p) => p.featured)} />}
+        aside={<FeaturedPostCard post={blogPosts?.find((p) => p.featured)} />}
       />
 
       <section aria-label="Articles" className="py-16 md:py-20">
@@ -92,6 +94,7 @@ export default function BlogPage() {
             ))}
           </div>
 
+          {!blogPosts && <ContentSkeleton count={4} className="lg:grid-cols-4" />}
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {posts.map((post, i) => (
               <PostCard key={post.id} post={post} index={i} lead={i === 0 && active === "All"} />

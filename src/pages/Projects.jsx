@@ -5,7 +5,9 @@ import { ArrowUpRight, Search, FolderSearch } from "lucide-react";
 import { motion } from "motion/react";
 import PageHeader from "../components/ui/PageHeader";
 import { FinalCta } from "../components/home/PeopleAndLabs";
-import { projects } from "../data/projectsData";
+import { useProjects } from "@/lib/content";
+import MediaImage from "@/components/ui/MediaImage";
+import ContentSkeleton from "@/components/ui/ContentSkeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,14 +15,14 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/in
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { ProjectFan } from "@/components/sections/HeroVisuals";
 
-const categories = ["All", ...new Set(projects.map((p) => p.category))];
-
 export default function ProjectsPage() {
     const [activeCategory, setActiveCategory] = useState("All");
     const [query, setQuery] = useState("");
+    const projects = useProjects();
+    const categories = ["All", ...new Set((projects ?? []).map((p) => p.category))];
 
     const q = query.trim().toLowerCase();
-    const filtered = projects.filter((p) => {
+    const filtered = (projects ?? []).filter((p) => {
         const matchCat = activeCategory === "All" || p.category === activeCategory;
         const matchQuery = !q || p.title.toLowerCase().includes(q) || p.category.toLowerCase().includes(q) || p.tags.some((t) => t.toLowerCase().includes(q));
         return matchCat && matchQuery;
@@ -33,7 +35,7 @@ export default function ProjectsPage() {
                 badge="Portfolio update in progress"
                 title="Work from the studio."
                 lede="Websites, apps and brands we've designed and built. Some projects below are placeholders while we add our latest client work."
-                aside={<ProjectFan projects={projects} />}
+                aside={<ProjectFan projects={projects ?? []} />}
             />
 
             {/* Filters */}
@@ -70,7 +72,9 @@ export default function ProjectsPage() {
             {/* portfolio-01 grid */}
             <section aria-label="Projects" className="py-16 md:py-20">
                 <div className="mx-auto max-w-6xl px-4 sm:px-6">
-                    {filtered.length === 0 ? (
+                    {!projects ? (
+                        <ContentSkeleton count={4} className="lg:grid-cols-2" />
+                    ) : filtered.length === 0 ? (
                         <Empty className="border border-dashed py-16">
                             <EmptyHeader>
                                 <EmptyMedia variant="icon"><FolderSearch /></EmptyMedia>
@@ -94,7 +98,8 @@ export default function ProjectsPage() {
                                 >
                                     <Link to={`/projects/${project.id}`} className="flex flex-col gap-5 rounded-2xl">
                                         <div className="relative overflow-hidden rounded-2xl bg-muted">
-                                            <img
+                                            <MediaImage
+                                                label={project.title}
                                                 src={project.thumb}
                                                 alt={project.alt}
                                                 loading="lazy"

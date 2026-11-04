@@ -1,11 +1,11 @@
 // The real TTS team (names, roles and photos confirmed by the founder).
 // Bios and fun facts come from the previous Team page; David and Emmanuella
 // don't have bios yet — TODO(content).
-import Ab1 from "../assets/img/Ab1.jpg";
-import Ab2 from "../assets/img/Ab2.jpeg";
+import Ab1 from "../assets/img/Ab1.webp";
+import Ab2 from "../assets/img/Ab2.webp";
 import Ab3 from "../assets/img/Ab3.jpeg";
-import David from "../assets/img/david.png";
-import Emmanuella from "../assets/img/emmanuella.png";
+import David from "../assets/img/david.webp";
+import Emmanuella from "../assets/img/emmanuella.webp";
 
 export const team = [
   {

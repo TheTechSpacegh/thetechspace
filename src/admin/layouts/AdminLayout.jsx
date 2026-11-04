@@ -1,4 +1,6 @@
 import { Suspense } from "react";
+import { Toaster } from "sonner";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import { Outlet, useLocation } from "react-router";
 import RouteErrorBoundary from "@/components/RouteErrorBoundary";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -11,6 +13,8 @@ const pageTitles = {
     "/admin/posts": "Blog Posts",
     "/admin/team": "Team Members",
     "/admin/services": "Services",
+    "/admin/projects": "Projects",
+    "/admin/testimonials": "Testimonials",
     "/admin/milestones": "Milestones",
     "/admin/contacts": "Messages",
     "/admin/settings": "Settings",
@@ -25,6 +29,7 @@ export default function AdminLayout() {
         pageTitles[pathname] ||
         Object.entries(pageTitles).find(([path]) => pathname.startsWith(path) && path !== "/admin")?.[1] ||
         "Overview";
+    useDocumentTitle(`${title} · Admin`);
 
     return (
         <TooltipProvider delayDuration={0}>
@@ -40,6 +45,7 @@ export default function AdminLayout() {
                         </RouteErrorBoundary>
                     </main>
                 </SidebarInset>
+                <Toaster position="top-center" richColors closeButton />
             </SidebarProvider>
         </TooltipProvider>
     );

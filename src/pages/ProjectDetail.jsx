@@ -1,16 +1,34 @@
 import { useParams, Link, useNavigate } from "react-router";
 import { ArrowLeft, ArrowRight, ExternalLink, Tag } from "lucide-react";
 import { motion } from "motion/react";
-import { projects } from "../data/projectsData";
+import { useProjects } from "@/lib/content";
+import { useDocumentTitle } from "@/hooks/use-document-title";
+import MediaImage from "@/components/ui/MediaImage";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ProjectDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
 
-    const project = projects.find((p) => p.id === id);
-    const currentIndex = projects.findIndex((p) => p.id === id);
-    const prevProject = currentIndex > 0 ? projects[currentIndex - 1] : null;
-    const nextProject = currentIndex < projects.length - 1 ? projects[currentIndex + 1] : null;
+    const projects = useProjects();
+    const list = projects ?? [];
+    const project = list.find((p) => p.id === id);
+    const currentIndex = list.findIndex((p) => p.id === id);
+    const prevProject = currentIndex > 0 ? list[currentIndex - 1] : null;
+    const nextProject = currentIndex < list.length - 1 ? list[currentIndex + 1] : null;
+    useDocumentTitle(project ? project.title : projects ? "Project not found" : "Projects");
+
+    if (!projects) {
+        return (
+            <div className="min-h-screen px-4 pb-20 pt-36" aria-busy="true" aria-label="Loading project">
+                <div className="mx-auto flex max-w-5xl flex-col gap-4">
+                    <Skeleton className="aspect-[16/8] rounded-3xl" />
+                    <Skeleton className="h-10 w-2/3 rounded-lg" />
+                    <Skeleton className="h-4 w-1/2 rounded" />
+                </div>
+            </div>
+        );
+    }
 
     if (!project) {
         return (
@@ -31,7 +49,8 @@ export default function ProjectDetail() {
         <div className="min-h-screen bg-white">
             {/* Hero Image */}
             <section className="relative h-[60vh] md:h-[70vh] overflow-hidden">
-                <img
+                <MediaImage
+                    label={project.title}
                     src={project.src}
                     alt={project.alt}
                     className="w-full h-full object-cover"

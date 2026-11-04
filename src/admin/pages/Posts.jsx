@@ -1,22 +1,7 @@
-import { FileText } from "lucide-react";
-import ComingSoon from "../components/ComingSoon";
-
-const features = [
-    "Rich text editor with WYSIWYG formatting",
-    "Featured image upload & management",
-    "Category & tag organization",
-    "Draft → Review → Publish workflow",
-    "SEO metadata editor & preview",
-    "Bulk actions & search filtering",
-];
+// Admin: posts, managed through the shared ResourceManager.
+import ResourceManager from "../components/content/ResourceManager";
+import { posts } from "../lib/resources";
 
 export default function Posts() {
-    return (
-        <ComingSoon
-            icon={FileText}
-            title="Blog Posts Management"
-            description="Create, edit, and manage your blog posts with a powerful rich text editor. Organize content with categories, tags, and a full publishing workflow."
-            features={features}
-        />
-    );
+  return <ResourceManager config={posts} />;
 }

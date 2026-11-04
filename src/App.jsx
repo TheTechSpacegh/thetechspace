@@ -6,13 +6,14 @@ import NotFound from './pages/NotFound'
 import { lazyRoute } from './lib/lazyRoute'
 import Home from './pages/Home'
 import About from './pages/About'
-import Services from './pages/Services'
-import Team from './pages/Team'
-import BlogPage from './pages/Blogs'
-import Contact from './pages/Contact'
-import ProjectsPage from './pages/Projects'
-import ProjectDetail from './pages/ProjectDetail'
-import BlogDetail from './pages/BlogDetail'
+// Home and About load with the first visit; the rest load on demand.
+const Services = lazyRoute(() => import('./pages/Services'))
+const Team = lazyRoute(() => import('./pages/Team'))
+const BlogPage = lazyRoute(() => import('./pages/Blogs'))
+const Contact = lazyRoute(() => import('./pages/Contact'))
+const ProjectsPage = lazyRoute(() => import('./pages/Projects'))
+const ProjectDetail = lazyRoute(() => import('./pages/ProjectDetail'))
+const BlogDetail = lazyRoute(() => import('./pages/BlogDetail'))
 
 // Code-split: the admin is staff-only, so it doesn't ship in the public
 // bundle. lazyRoute() recovers from stale chunks after a deploy.
@@ -30,6 +31,8 @@ const AdminContacts = lazyRoute(() => import('./admin/pages/Contacts'))
 const AdminSettings = lazyRoute(() => import('./admin/pages/Settings'))
 const AdminHelp = lazyRoute(() => import('./admin/pages/HelpCenter'))
 const AdminMilestones = lazyRoute(() => import('./admin/pages/MilestonesManagement'))
+const AdminProjects = lazyRoute(() => import('./admin/pages/ProjectsManagement'))
+const AdminTestimonials = lazyRoute(() => import('./admin/pages/Testimonials'))
 
 function App() {
 
@@ -63,6 +66,8 @@ function App() {
             <Route path='team' element={<AdminTeam />} />
             <Route path='services' element={<AdminServices />} />
             <Route path='milestones' element={<AdminMilestones />} />
+            <Route path='projects' element={<AdminProjects />} />
+            <Route path='testimonials' element={<AdminTestimonials />} />
             <Route path='contacts' element={<AdminContacts />} />
             <Route path='settings' element={<AdminSettings />} />
             <Route path='help' element={<AdminHelp />} />

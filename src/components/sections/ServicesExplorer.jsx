@@ -7,6 +7,8 @@ import { ArrowUpRight, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+// Services added in the admin without an image show the TTS mark instead.
+const placeholder = "/favicon.png";
 
 export default function ServicesExplorer({ services }) {
   const [active, setActive] = useState(0);
@@ -40,7 +42,7 @@ export default function ServicesExplorer({ services }) {
               <AnimatePresence mode="wait" initial={false}>
                 <motion.img
                   key={current.id}
-                  src={current.image}
+                  src={current.image || placeholder}
                   alt={`Example ${current.title.toLowerCase()} work`}
                   initial={{ opacity: 0, scale: 1.03 }}
                   animate={{ opacity: 1, scale: 1 }}

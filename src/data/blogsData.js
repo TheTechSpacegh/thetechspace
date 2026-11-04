@@ -1,10 +1,10 @@
-import featuredHero from "../assets/blog/featured-hero.png";
-import aiEthics from "../assets/blog/ai-ethics.png";
-import blockchain from "../assets/blog/blockchain.png";
-import serverless from "../assets/blog/serverless.png";
-import cybersecurity from "../assets/blog/cybersecurity.png";
-import webDesign from "../assets/blog/web-design.png";
-import cloudSolutions from "../assets/blog/cloud-solutions.png";
+import featuredHero from "../assets/blog/featured-hero.webp";
+import aiEthics from "../assets/blog/ai-ethics.webp";
+import blockchain from "../assets/blog/blockchain.webp";
+import serverless from "../assets/blog/serverless.webp";
+import cybersecurity from "../assets/blog/cybersecurity.webp";
+import webDesign from "../assets/blog/web-design.webp";
+import cloudSolutions from "../assets/blog/cloud-solutions.webp";
 
 export const blogPosts = [
   {

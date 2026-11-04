@@ -1,12 +1,7 @@
-# Frontend CI/CD
+# Frontend CI: lint + build on every push and pull request.
 #
-#   every push / PR  → lint + build (the "check" job)
-#   PR               → deploy that build to a Netlify preview URL and comment it on the PR
-#   push to main     → deploy that build to production
-#
-# The deploy job reuses the exact dist/ the check job built, so what was
-# tested is what ships. It skips itself (green, with a notice) until the
-# NETLIFY_AUTH_TOKEN and NETLIFY_SITE_ID secrets exist; see .github/DEPLOYMENT.md.
+# Railway deploys the site itself (.railway/railway.ts, checkSuites: true),
+# and only after this check passes on main, so a broken build never ships.
 
 name: Frontend
 
@@ -52,9 +47,9 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          # Public value baked into the bundle; set it under
-          # Settings → Secrets and variables → Actions → Variables.
-          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          # This build only checks the code; Railway builds the deployed site
+          # with its own VITE_API_URL (.railway/railway.ts).
+          VITE_API_URL: https://api.example.com
 
       - name: Bundle size
         run: |
@@ -65,86 +60,3 @@ jobs:
             ls -S dist/assets | head -8 | while read f; do du -h "dist/assets/$f"; done
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: dist
-          path: dist
-          retention-days: 7
-
-  deploy:
-    name: Deploy to Netlify
-    needs: check
-    # Never deploy from Dashboard pushes directly: only PR previews and main.
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      pull-requests: write
-    environment:
-      name: ${{ github.event_name == 'pull_request' && 'preview' || 'production' }}
-      url: ${{ steps.deploy.outputs.url }}
-    env:
-      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-      NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-    steps:
-      - name: Check Netlify secrets
-        id: secrets
-        run: |
-          if [ -n "$NETLIFY_AUTH_TOKEN" ] && [ -n "$NETLIFY_SITE_ID" ]; then
-            echo "ok=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "ok=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Deploy skipped: add NETLIFY_AUTH_TOKEN and NETLIFY_SITE_ID repo secrets (see .github/DEPLOYMENT.md)."
-          fi
-
-      # netlify.toml (redirects, headers) must sit next to the deploy.
-      - uses: actions/checkout@v7
-        if: steps.secrets.outputs.ok == 'true'
-        with:
-          sparse-checkout: netlify.toml
-          sparse-checkout-cone-mode: false
-
-      - uses: actions/download-artifact@v8
-        if: steps.secrets.outputs.ok == 'true'
-        with:
-          name: dist
-          path: dist
-
-      - uses: actions/setup-node@v7
-        if: steps.secrets.outputs.ok == 'true'
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Deploy
-        id: deploy
-        if: steps.secrets.outputs.ok == 'true'
-        run: |
-          # Previews live at pr-<number>--<site>.netlify.app; production at the site URL.
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            FLAGS="--alias pr-${{ github.event.number }}"; KEY=deploy_url
-          else
-            FLAGS="--prod"; KEY=url
-          fi
-          npx --yes netlify-cli deploy --dir dist $FLAGS \
-            --message "${{ github.event_name }} ${{ github.sha }}" --json > deploy.json
-          URL=$(node -p "require('./deploy.json').$KEY")
-          echo "url=$URL" >> "$GITHUB_OUTPUT"
-          echo "Deployed: $URL" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Comment preview URL on PR
-        if: steps.secrets.outputs.ok == 'true' && github.event_name == 'pull_request'
-        uses: actions/github-script@v9
-        env:
-          PREVIEW_URL: ${{ steps.deploy.outputs.url }}
-        with:
-          script: |
-            const marker = "<!-- netlify-preview -->";
-            const body = `${marker}\n**Preview:** ${process.env.PREVIEW_URL}\n\nBuilt from ${context.sha.slice(0, 7)}.`;
-            const { owner, repo } = context.repo;
-            const issue_number = context.issue.number;
-            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number });
-            const mine = comments.find((c) => c.body?.includes(marker));
-            if (mine) await github.rest.issues.updateComment({ owner, repo, comment_id: mine.id, body });
-            else await github.rest.issues.createComment({ owner, repo, issue_number, body });

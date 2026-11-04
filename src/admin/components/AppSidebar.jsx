@@ -12,6 +12,8 @@ import {
   HelpCircle,
   Milestone,
   ExternalLink,
+  FolderKanban,
+  Quote,
 } from "lucide-react";
 import {
   Sidebar,
@@ -29,10 +31,8 @@ import {
 } from "@/components/ui/sidebar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { mockLatestMessages } from "../data/mockData";
+import { useUnreadCount } from "../hooks/useUnreadCount";
 import logo1 from "@/assets/img/logo1.png";
-
-const unread = mockLatestMessages.filter((m) => !m.read).length;
 
 const nav = [
   {
@@ -42,8 +42,10 @@ const nav = [
       { title: "Posts", href: "/admin/posts", icon: FileText },
       { title: "Team", href: "/admin/team", icon: Users },
       { title: "Services", href: "/admin/services", icon: Briefcase },
+      { title: "Projects", href: "/admin/projects", icon: FolderKanban },
+      { title: "Testimonials", href: "/admin/testimonials", icon: Quote },
       { title: "Milestones", href: "/admin/milestones", icon: Milestone },
-      { title: "Messages", href: "/admin/contacts", icon: MessageSquare, badge: unread },
+      { title: "Messages", href: "/admin/contacts", icon: MessageSquare, badge: "unread" },
     ],
   },
   {
@@ -58,6 +60,7 @@ const nav = [
 export default function AppSidebar() {
   const { pathname } = useLocation();
   const { setOpenMobile } = useSidebar();
+  const badges = { unread: useUnreadCount() };
 
   // Close the mobile sheet after navigating
   useEffect(() => {
@@ -104,9 +107,9 @@ export default function AppSidebar() {
                         <span>{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
-                    {item.badge > 0 && (
+                    {badges[item.badge] > 0 && (
                       <SidebarMenuBadge className={active ? "text-primary-foreground" : "text-primary"}>
-                        {item.badge}
+                        {badges[item.badge]}
                         <span className="sr-only"> unread</span>
                       </SidebarMenuBadge>
                     )}
