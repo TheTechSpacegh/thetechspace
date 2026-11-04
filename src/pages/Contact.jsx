@@ -14,6 +14,7 @@ const EMPTY_FORM = {
   projectType: "",
   budget: "",
   details: "",
+  website: "", // honeypot: hidden from people, bots fill it in
 };
 
 const inputClass =
@@ -156,6 +157,10 @@ Services: ${services.join(", ")}` : "";
                 </div>
               ) : (
                 <form id="brief" className="scroll-mt-28 space-y-5" onSubmit={handleSubmit}>
+                  <div aria-hidden="true" className="absolute -left-[9999px] h-px w-px overflow-hidden">
+                    <label htmlFor="website">Website</label>
+                    <input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" value={form.website} onChange={update("website")} />
+                  </div>
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div>
                       <label htmlFor="firstName" className={labelClass}>First name *</label>

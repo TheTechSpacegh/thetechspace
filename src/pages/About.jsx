@@ -16,9 +16,10 @@ import { Button } from "@/components/ui/button";
 import SectionIntro from "@/components/sections/SectionIntro";
 import { Timeline } from "@/components/shadcn-space/radix/blocks/timeline-01/timeline";
 import { FinalCta } from "@/components/home/PeopleAndLabs";
-import { milestonesData as milestones } from "@/data/milestonesData";
-import { team } from "@/data/team";
-import { TeamMosaic } from "@/components/sections/HeroVisuals";
+import { useFoundedYear, useMilestones, useTeam } from "@/lib/content";
+import MediaImage from "@/components/ui/MediaImage";
+import ContentSkeleton from "@/components/ui/ContentSkeleton";
+import { PrinciplesPanel } from "@/components/sections/StudioVisuals";
 
 const ease = [0.21, 0.47, 0.32, 0.98];
 
@@ -97,6 +98,9 @@ function FeatureGrid({ items, columns = "lg:grid-cols-3" }) {
 }
 
 export default function AboutPage() {
+  const team = useTeam();
+  const milestones = useMilestones();
+  const founded = useFoundedYear();
   const statsRef = useRef(null);
   const statsInView = useInView(statsRef, { once: true, margin: "-80px" });
 
@@ -104,7 +108,7 @@ export default function AboutPage() {
     <div className="bg-background">
       <PageHeader
         crumb="About"
-        badge="Since 2018"
+        badge={`Since ${founded}`}
         title="We engineer digital excellence."
         lede="From architecture to deployment, we build scalable, performant digital products that help businesses grow."
         actions={
@@ -113,7 +117,7 @@ export default function AboutPage() {
             <ButtonLink to="/team" variant="ghostOnDark">Meet the team</ButtonLink>
           </>
         }
-        aside={<TeamMosaic team={team} />}
+        aside={<PrinciplesPanel />}
       />
 
       {/* ── about-us-01: disciplines + counters ── */}
@@ -162,7 +166,7 @@ export default function AboutPage() {
             align="split"
             badge="Why TTS"
             title="What sets us apart"
-            lede="Founded in 2018, TTS emerged from a simple belief: that great design and powerful technology should work hand in hand. We're not just another agency. Every pixel, every line of code and every user interaction matters."
+            lede={`Founded in ${founded}, TTS emerged from a simple belief: that great design and powerful technology should work hand in hand. We're not just another agency. Every pixel, every line of code and every user interaction matters.`}
           />
           <FeatureGrid items={apart} columns="lg:grid-cols-4" />
           <ul className="flex flex-wrap gap-x-8 gap-y-3">
@@ -198,7 +202,11 @@ export default function AboutPage() {
             lede="Innovating with precision, building the future of technology. Each milestone is a chapter in our story."
           />
           {/* TODO(content): some milestone claims are unverified (see PRODUCT.md). */}
-          <Timeline items={milestones.map((m) => ({ date: m.year, title: m.title, description: m.description }))} />
+          {milestones ? (
+            <Timeline items={milestones.map((m) => ({ date: m.year, title: m.title, description: m.description }))} />
+          ) : (
+            <ContentSkeleton variant="timeline" count={4} />
+          )}
         </div>
       </section>
 
@@ -212,7 +220,8 @@ export default function AboutPage() {
             lede="Passionate people dedicated to bringing your digital vision to life."
           />
           <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-5">
-            {team.map((m, i) => (
+            {!team && <ContentSkeleton count={5} className="col-span-full lg:grid-cols-5" />}
+            {team?.map((m, i) => (
               <motion.div
                 key={m.name}
                 initial={{ y: 30, opacity: 0 }}
@@ -222,7 +231,7 @@ export default function AboutPage() {
                 className="group flex flex-col items-center gap-4 text-center"
               >
                 <div className="w-full overflow-hidden rounded-2xl bg-muted">
-                  <img src={m.photo} alt={m.name} loading="lazy" className="aspect-[4/5] w-full object-cover transition-all duration-300 group-hover:scale-105" />
+                  <MediaImage src={m.photo} alt={m.name} loading="lazy" className="aspect-[4/5] w-full object-cover transition-all duration-300 group-hover:scale-105" />
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-foreground">{m.name}</h3>

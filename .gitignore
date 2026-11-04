@@ -32,13 +32,8 @@ dist-ssr
 .env.*
 !.env.example
 
-# Backend (Node + Express + Prisma)
-Backend/node_modules/
-Backend/dist/
-Backend/uploads/
-Backend/coverage/
-Backend/prisma/*.db
-Backend/prisma/*.db-journal
+# The backend lives in its own repository.
+/Backend/
 
 # Local tooling output
 .playwright-mcp/

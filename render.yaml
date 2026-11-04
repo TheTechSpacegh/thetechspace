@@ -1,0 +1,57 @@
+# Render Blueprint for the public site (a static site on Render's CDN).
+# In Render: New → Blueprint → pick this repository.
+# The API and database are a separate Blueprint in the backend repo.
+
+services:
+  - type: web
+    runtime: static
+    name: tts-site
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    autoDeployTrigger: checksPass # deploy only after "Lint & build" passes on GitHub
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # The API's public URL, baked into the build, e.g. https://api.thetechspace.com.
+      # Without it the site shows its built-in content and the admin needs the backend.
+      - key: VITE_API_URL
+        sync: false
+
+    # Single-page app: React Router handles every path. Render serves real
+    # files (/assets/…, /robots.txt) first and only rewrites what's left.
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+    headers:
+      # Vite fingerprints everything in /assets, so it can be cached forever.
+      # (Only this path sets Cache-Control: Render doesn't document which rule
+      # wins when two match, so there's no competing /* rule.)
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Permissions-Policy
+        value: camera=(), microphone=(), geolocation=(), payment=()
+      - path: /*
+        name: Strict-Transport-Security
+        value: max-age=31536000; includeSubDomains
+      # Scripts only from this site. Images, video and API calls may come from
+      # any https origin (Cloudinary, Unsplash, the API on its own domain).
+      - path: /*
+        name: Content-Security-Policy
+        value: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' https:; connect-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+      # The admin console should never appear in search results.
+      - path: /admin/*
+        name: X-Robots-Tag
+        value: noindex, nofollow

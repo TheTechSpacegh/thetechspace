@@ -4,40 +4,7 @@ import { Link } from "react-router";
 import { useReducedMotion } from "motion/react";
 import { Code2, Palette, PenTool, TrendingUp, Compass, Mail, Clock, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-// ── About: Synthesis-style mosaic of real people + discipline tiles ──────────
-export function TeamMosaic({ team }) {
-  const tiles = [
-    { type: "person", m: team[0] },
-    { type: "word", label: "design", icon: Palette, cls: "bg-violet-500/20 text-violet-100" },
-    { type: "person", m: team[1] },
-    { type: "word", label: "Since 2018", cls: "bg-white/5 text-white/80 font-mono text-xs", small: true },
-    { type: "person", m: team[2] },
-    { type: "word", label: "build", icon: Code2, cls: "bg-sky-500/15 text-sky-100" },
-    { type: "person", m: team[3] },
-    { type: "word", label: "grow", icon: TrendingUp, cls: "bg-emerald-500/15 text-emerald-100" },
-    { type: "person", m: team[4] },
-  ];
-  return (
-    <div className="relative mx-auto aspect-square w-full max-w-md">
-      <div aria-hidden="true" className="absolute inset-6 rounded-full bg-violet-600/30 blur-3xl" />
-      <ul className="relative grid h-full grid-cols-3 gap-2.5">
-        {tiles.map((t, i) => (
-          <li key={i} className={cn("overflow-hidden rounded-2xl ring-1 ring-white/10", i % 2 ? "translate-y-3" : "")}>
-            {t.type === "person" ? (
-              <img src={t.m.photo} alt={t.m.name} className="h-full w-full object-cover" />
-            ) : (
-              <div className={cn("flex h-full flex-col items-center justify-center gap-1.5 text-center", t.cls)}>
-                {t.icon && <t.icon className="size-6" aria-hidden="true" />}
-                <span className={t.small ? "" : "font-serif text-xl italic"}>{t.label}</span>
-              </div>
-            )}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
+import MediaImage from "@/components/ui/MediaImage";
 
 // ── Services: orbit spotlight (Shadcn Space orbiting-circles-03) ─────────────
 const orbitServices = [
@@ -106,25 +73,6 @@ export function ServiceOrbit() {
   );
 }
 
-// ── Team: documentary photo strip (Liveblocks) ───────────────────────────────
-export function TeamStripVisual({ team }) {
-  return (
-    <div className="relative">
-      <div aria-hidden="true" className="absolute inset-x-8 top-1/2 h-40 -translate-y-1/2 rounded-full bg-violet-600/30 blur-3xl" />
-      <ul className="relative flex items-end justify-center gap-2.5 sm:gap-3">
-        {team.map((m, i) => (
-          <li key={m.name} className={cn("group relative w-1/5 overflow-hidden rounded-2xl ring-1 ring-white/10", i % 2 ? "mb-8" : "")}>
-            <img src={m.photo} alt={m.name} className="aspect-[3/5] w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-            <span className="absolute inset-x-1.5 bottom-1.5 truncate rounded-full bg-black/55 px-2 py-0.5 text-center text-[11px] font-medium text-white backdrop-blur">
-              {m.name.split(" ")[0]}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
 // ── Projects: fanned stack of work ───────────────────────────────────────────
 export function ProjectFan({ projects }) {
   const cards = projects.slice(0, 3);
@@ -138,7 +86,7 @@ export function ProjectFan({ projects }) {
           to={`/projects/${p.id}`}
           className={cn("absolute w-[70%] overflow-hidden rounded-2xl bg-[#0e0b1c] shadow-2xl ring-1 ring-white/15 transition-transform duration-500 hover:z-20 hover:-translate-y-2", pose[i])}
         >
-          <img src={p.thumb} alt={p.alt} className={cn("aspect-[16/10] w-full object-cover", i !== 1 && "opacity-60")} />
+          <MediaImage src={p.thumb} alt={p.alt} label={p.title} className={cn("aspect-[16/10] w-full object-cover", i !== 1 && "opacity-60")} />
           {/* Only the front card carries a caption; the tilted back cards would clip theirs. */}
           {i === 1 ? (
             <span className="flex items-center justify-between px-4 py-2.5 text-sm font-medium text-white">
@@ -159,7 +107,7 @@ export function FeaturedPostCard({ post }) {
   if (!post) return null;
   return (
     <Link to={`/blogs/${post.slug}`} className="group relative block overflow-hidden rounded-2xl bg-[#0e0b1c] ring-1 ring-white/15">
-      <img src={post.image} alt="" className="aspect-[16/10] w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+      <MediaImage src={post.image} label={post.title} className="aspect-[16/10] w-full object-cover transition-transform duration-500 group-hover:scale-105" />
       <div className="absolute inset-0 bg-gradient-to-t from-[#06040d] via-[#06040d]/40 to-transparent" />
       <div className="absolute inset-x-0 bottom-0 p-6">
         <span className="rounded-full bg-violet-500/25 px-2.5 py-0.5 text-xs font-medium text-violet-100 ring-1 ring-inset ring-violet-300/30">Featured · {post.category}</span>

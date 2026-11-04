@@ -11,7 +11,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "../contexts/AuthContext";
-import { mockStats, mockRecentPosts, mockLatestMessages, mockEnquiries } from "../data/mockData";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useDashboardData } from "../hooks/useDashboardData";
 
 const greeting = () => {
   const h = new Date().getHours();
@@ -42,13 +43,24 @@ const sitePages = [
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const unread = mockLatestMessages.filter((m) => !m.read).length;
-  const latest = mockEnquiries.at(-1);
-  const enquiriesThisMonth = latest.websites + latest.design + latest.marketing;
+  const { data, error } = useDashboardData();
+
+  if (error) {
+    return (
+      <div role="alert" className="mx-auto max-w-xl rounded-2xl border border-destructive/30 bg-destructive/5 p-6 text-sm">
+        <p className="font-medium text-foreground">The dashboard couldn't load.</p>
+        <p className="mt-1 text-muted-foreground">{error.message}. Refresh to try again.</p>
+      </div>
+    );
+  }
+  if (!data) return <DashboardSkeleton />;
+
+  const { stats, enquiries, messages, unread, totalMessages, posts } = data;
+  const enquiriesThisMonth = enquiries.at(-1)?.total ?? 0;
 
   const small = [
-    { title: "Team members", value: mockStats.teamMembers, icon: Users, to: "/admin/team" },
-    { title: "Active services", value: mockStats.activeServices, icon: Briefcase, to: "/admin/services" },
+    { title: "Team members", value: stats.teamMembers, icon: Users, to: "/admin/team" },
+    { title: "Active services", value: stats.activeServices, icon: Briefcase, to: "/admin/services" },
   ];
 
   return (
@@ -62,8 +74,9 @@ export default function Dashboard() {
           </h1>
         </div>
         <div className="flex items-center gap-2">
-          {/* TODO(backend): remove once the dashboard reads live data. */}
-          <Badge variant="outline" className="h-7 border-amber-300 bg-amber-50 px-2.5 text-amber-800">Sample data</Badge>
+          {!data.live && (
+            <Badge variant="outline" className="h-7 border-amber-300 bg-amber-50 px-2.5 text-amber-800">Sample data</Badge>
+          )}
           <Button asChild className="rounded-lg">
             <Link to="/admin/posts"><Plus /> New post</Link>
           </Button>
@@ -80,7 +93,7 @@ export default function Dashboard() {
           <CardContent className="flex items-center gap-6">
             <div>
               <p className="text-xs text-muted-foreground">Published posts</p>
-              <p className="text-3xl font-semibold tabular-nums text-card-foreground">{mockStats.totalPosts}</p>
+              <p className="text-3xl font-semibold tabular-nums text-card-foreground">{stats.totalPosts}</p>
             </div>
             <Separator orientation="vertical" className="h-12" />
             <div>
@@ -129,7 +142,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[280px] w-full">
-              <BarChart accessibilityLayer data={mockEnquiries}>
+              <BarChart accessibilityLayer data={enquiries}>
                 <CartesianGrid vertical={false} strokeDasharray="3 3" />
                 <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={10} fontSize={12} />
                 <YAxis tickLine={false} axisLine={false} tickMargin={8} fontSize={12} width={28} allowDecimals={false} />
@@ -147,11 +160,14 @@ export default function Dashboard() {
         <Card className="col-span-12 gap-0 rounded-2xl pb-0 xl:col-span-4">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg font-medium">Inbox</CardTitle>
-            <CardDescription>{unread} unread of {mockLatestMessages.length}</CardDescription>
+            <CardDescription>{unread} unread of {totalMessages}</CardDescription>
           </CardHeader>
           <CardContent className="px-0">
             <ul className="divide-y">
-              {mockLatestMessages.map((m) => (
+              {messages.length === 0 && (
+                <li className="px-6 py-6 text-sm text-muted-foreground">No messages yet. Enquiries from the contact form land here.</li>
+              )}
+              {messages.map((m) => (
                 <li key={m.id}>
                   <Link to="/admin/contacts" className="flex items-start gap-3 px-6 py-3 hover:bg-muted/60">
                     <Avatar className="size-9">
@@ -196,7 +212,7 @@ export default function Dashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {mockRecentPosts.map((post) => (
+                {posts.map((post) => (
                   <TableRow key={post.id}>
                     <TableCell className="py-3 pl-6">
                       <div className="flex items-center gap-3">
@@ -253,9 +269,25 @@ export default function Dashboard() {
             </ul>
           </CardContent>
           <CardFooter className="border-t pt-4 text-xs text-muted-foreground">
-            <MessageSquare className="mr-1.5 size-3.5" aria-hidden="true" /> Contact form delivery is not wired up yet
+            <MessageSquare className="mr-1.5 size-3.5" aria-hidden="true" />
+            {data.live ? "Contact form messages arrive in the inbox and by email" : "Connect the backend (VITE_API_URL) to receive contact-form messages"}
           </CardFooter>
         </Card>
+      </div>
+    </div>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="mx-auto flex max-w-7xl flex-col gap-6" aria-busy="true" aria-label="Loading dashboard">
+      <Skeleton className="h-12 w-72 rounded-xl" />
+      <div className="grid grid-cols-12 gap-6">
+        <Skeleton className="col-span-12 h-40 rounded-2xl xl:col-span-6" />
+        <Skeleton className="col-span-12 h-40 rounded-2xl sm:col-span-6 xl:col-span-3" />
+        <Skeleton className="col-span-12 h-40 rounded-2xl sm:col-span-6 xl:col-span-3" />
+        <Skeleton className="col-span-12 h-80 rounded-2xl xl:col-span-8" />
+        <Skeleton className="col-span-12 h-80 rounded-2xl xl:col-span-4" />
       </div>
     </div>
   );

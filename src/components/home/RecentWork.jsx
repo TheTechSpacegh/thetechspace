@@ -4,9 +4,12 @@ import { motion } from "motion/react";
 import { ArrowUpRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { projects } from "@/data/projectsData";
+import { useProjects } from "@/lib/content";
+import MediaImage from "@/components/ui/MediaImage";
+import ContentSkeleton from "@/components/ui/ContentSkeleton";
 
 export default function RecentWork() {
+  const projects = useProjects();
   return (
     <section aria-labelledby="work-title" className="border-y bg-card py-20 md:py-28">
       <div className="mx-auto flex max-w-6xl flex-col gap-12 px-4 sm:px-6">
@@ -23,8 +26,9 @@ export default function RecentWork() {
           </Button>
         </div>
 
+        {!projects && <ContentSkeleton count={4} className="lg:grid-cols-2" />}
         <div className="grid w-full grid-cols-1 gap-x-7 gap-y-12 md:grid-cols-2">
-          {projects.slice(0, 4).map((p, i) => (
+          {projects?.slice(0, 4).map((p, i) => (
             <motion.div
               key={p.id}
               initial={{ opacity: 0, y: 30 }}
@@ -35,7 +39,7 @@ export default function RecentWork() {
             >
               <Link to={`/projects/${p.id}`} className="flex flex-col gap-5 rounded-2xl">
                 <div className="relative overflow-hidden rounded-2xl bg-muted">
-                  <img src={p.thumb} alt={p.alt} loading="lazy" decoding="async" className="aspect-[16/10] w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                  <MediaImage src={p.thumb} alt={p.alt} label={p.title} loading="lazy" decoding="async" className="aspect-[16/10] w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                   <span className="absolute right-4 top-4 grid size-11 place-items-center rounded-full bg-background/90 text-foreground opacity-0 shadow-lg transition-all duration-300 group-hover:rotate-45 group-hover:opacity-100">
                     <ArrowUpRight className="size-5" aria-hidden="true" />
                   </span>

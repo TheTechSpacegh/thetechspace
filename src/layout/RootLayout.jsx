@@ -3,6 +3,17 @@ import { Outlet, useLocation } from "react-router";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import RouteErrorBoundary from "../components/RouteErrorBoundary";
+import SiteSplash from "../components/SiteSplash";
+import { useDocumentTitle } from "../hooks/use-document-title";
+
+const TITLES = { "/": null, "/about": "About", "/services": "Services", "/team": "Team", "/projects": "Projects", "/blogs": "Blog", "/contact": "Contact" };
+
+// Detail pages (a post, a project) set a more specific title themselves.
+function RouteTitle() {
+  const { pathname } = useLocation();
+  useDocumentTitle(pathname in TITLES ? TITLES[pathname] : undefined);
+  return null;
+}
 
 // BrowserRouter keeps the previous scroll position between routes, so a
 // footer link would land on the bottom of the next page. Reset on navigation,
@@ -32,6 +43,8 @@ const RootLayout = () => {
         Skip to content
       </a>
       <ScrollManager />
+      <RouteTitle />
+      <SiteSplash />
       <Navbar />
       <main id="main">
         <RouteErrorBoundary resetKey={pathname}>

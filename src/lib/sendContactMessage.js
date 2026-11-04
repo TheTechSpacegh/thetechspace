@@ -1,12 +1,13 @@
-// Delivers a contact-form submission somewhere a human will read it.
+// Delivers a contact-form submission to the TTS API, which stores it in the
+// admin inbox and emails the team.
 //
 // `message` shape (all strings, optional fields may be ""):
 //   { firstName, lastName, email, phone, projectType, budget, details }
 //
 // Resolve when the message is on its way; throw to make the form show its
 // error state (which points visitors to hello@thetechspace.com as a fallback).
-// eslint-disable-next-line no-unused-vars -- stub until the backend's POST /api/contact exists
+import { api } from "./api";
+
 export async function sendContactMessage(message) {
-  // TODO(you): choose how messages are delivered and implement it here.
-  throw new Error("Contact delivery is not wired up yet");
+  await api("/api/contact", { method: "POST", body: message });
 }

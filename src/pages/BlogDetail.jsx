@@ -2,7 +2,11 @@ import { useEffect, useRef } from "react";
 import { useParams, Link } from "react-router";
 import { ArrowLeft, Calendar, User, Clock } from "lucide-react";
 import { gsap } from "gsap";
-import { blogPosts } from "../data/blogsData";
+import { usePost } from "@/lib/content";
+import { useDocumentTitle } from "@/hooks/use-document-title";
+import MediaImage from "@/components/ui/MediaImage";
+import Markdown from "@/components/ui/Markdown";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // ─── Category badge color map ─────────────────────────────────────────────────
 const categoryStyles = {
@@ -31,13 +35,17 @@ const FloatingDot = ({ size, color, x, y, delay, duration }) => (
 // ─── Blog Detail Page ─────────────────────────────────────────────────────────
 export default function BlogDetail() {
   const { slug } = useParams();
-  const post = blogPosts.find((p) => p.slug === slug);
+  const { data: post } = usePost(slug); // null = loading, undefined = no such post
+  // Seeded posts have no body yet (their "body" is the excerpt): keep the
+  // Coming Soon block for those; render anything an admin actually wrote.
+  useDocumentTitle(post ? post.title : post === undefined ? "Post not found" : "Blog");
+  const hasBody = Boolean(post?.content?.trim() && post.content.trim() !== post.excerpt?.trim());
   const heroRef = useRef(null);
   const comingSoonRef = useRef(null);
 
   // GSAP entrance animations
   useEffect(() => {
-    if (!heroRef.current || !comingSoonRef.current) return;
+    if (!heroRef.current) return;
 
     const ctx = gsap.context(() => {
       // Hero header entrance
@@ -73,6 +81,19 @@ export default function BlogDetail() {
 
     return () => ctx.revert();
   }, [post]);
+
+  if (post === null) {
+    return (
+      <div className="min-h-screen bg-slate-50 px-4 pb-20 pt-36" aria-busy="true" aria-label="Loading post">
+        <div className="mx-auto flex max-w-4xl flex-col gap-4">
+          <Skeleton className="h-6 w-32 rounded-full" />
+          <Skeleton className="h-12 w-3/4 rounded-lg" />
+          <Skeleton className="h-4 w-1/2 rounded" />
+          <Skeleton className="mt-8 h-72 rounded-3xl" />
+        </div>
+      </div>
+    );
+  }
 
   // 404 fallback
   if (!post) {
@@ -115,7 +136,7 @@ export default function BlogDetail() {
         <div className="relative overflow-hidden">
           {/* Background image */}
           <div className="absolute inset-0">
-            <img
+            <MediaImage
               src={post.image}
               alt={post.title}
               className="w-full h-full object-cover"
@@ -168,8 +189,19 @@ export default function BlogDetail() {
           </div>
         </div>
 
+        {hasBody && (
+          <article className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
+            <Markdown source={post.content} />
+            <div className="mt-12 border-t border-slate-200 pt-8">
+              <Link to="/blogs" className="inline-flex items-center gap-2 text-sm font-semibold text-violet-700 hover:text-violet-900">
+                <ArrowLeft className="w-4 h-4" /> Back to Blog
+              </Link>
+            </div>
+          </article>
+        )}
+
         {/* ── Coming Soon Content Area ── */}
-        <div
+        {!hasBody && <div
           ref={comingSoonRef}
           className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20"
         >
@@ -223,7 +255,7 @@ export default function BlogDetail() {
               </div>
             </div>
           </div>
-        </div>
+        </div>}
       </div>
     </div>
   );

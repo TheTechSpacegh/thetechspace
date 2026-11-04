@@ -4,7 +4,7 @@
 export const milestonesData = [
   {
     id: "1",
-    year: "2018",
+    year: "2025",
     title: "Founded",
     description: "TTS was born from a shared vision of three passionate tech enthusiasts who believed in the power of digital transformation. Starting from a small garage office, we set out to revolutionize how businesses approach technology.",
     icon: "rocket"

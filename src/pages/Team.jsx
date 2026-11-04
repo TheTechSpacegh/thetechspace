@@ -1,14 +1,16 @@
 // Team — Shadcn Space team-01 grid for the people, feature-02 cards for culture.
 import { motion } from "motion/react";
 import { Lightbulb, Handshake, GraduationCap } from "lucide-react";
-import { team } from "../data/team";
+import { useTeam } from "@/lib/content";
+import MediaImage from "@/components/ui/MediaImage";
+import ContentSkeleton from "@/components/ui/ContentSkeleton";
 import PageHeader from "../components/ui/PageHeader";
 import { ButtonLink } from "../components/ui/primitives";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import SectionIntro from "@/components/sections/SectionIntro";
 import { FinalCta } from "../components/home/PeopleAndLabs";
-import { TeamStripVisual } from "@/components/sections/HeroVisuals";
+import { ProjectThread } from "@/components/sections/StudioVisuals";
 
 const ease = [0.21, 0.47, 0.32, 0.98];
 
@@ -19,8 +21,9 @@ const values = [
 ];
 
 export default function TeamPage() {
-  const leads = team.filter((m) => m.bio);
-  const rest = team.filter((m) => !m.bio);
+  const team = useTeam();
+  const leads = team?.filter((m) => m.bio) ?? [];
+  const rest = team?.filter((m) => !m.bio) ?? [];
 
   return (
     <div className="bg-background">
@@ -30,13 +33,14 @@ export default function TeamPage() {
         title="The people who build your project."
         lede="A Ghanaian team of designers and developers. You talk to the same people who design, build and launch your project."
         actions={<ButtonLink to="/contact" arrow>Book a call with us</ButtonLink>}
-        aside={<TeamStripVisual team={team} />}
+        aside={<ProjectThread team={team} />}
       />
 
       {/* ── team-01: founders with bios ── */}
       <section aria-labelledby="founders-title" className="py-20 md:py-28">
         <div className="mx-auto flex max-w-6xl flex-col gap-12 px-4 sm:px-6">
           <SectionIntro id="founders-title" badge="Founders" title="Meet the minds behind TTS" />
+          {!team && <ContentSkeleton count={3} />}
           <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
             {leads.map((m, i) => (
               <motion.article
@@ -48,7 +52,7 @@ export default function TeamPage() {
                 className="group flex flex-col gap-5"
               >
                 <div className="overflow-hidden rounded-2xl bg-muted">
-                  <img src={m.photo} alt={m.name} loading={i === 0 ? "eager" : "lazy"} className="aspect-[4/5] w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                  <MediaImage src={m.photo} alt={m.name} loading={i === 0 ? "eager" : "lazy"} className="aspect-[4/5] w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                 </div>
                 <div className="flex flex-col gap-3">
                   <div>
@@ -75,7 +79,7 @@ export default function TeamPage() {
                 >
                   <Card className="rounded-2xl py-5">
                     <CardContent className="flex items-center gap-5 px-5">
-                      <img src={m.photo} alt={m.name} loading="lazy" className="size-24 shrink-0 rounded-xl object-cover" />
+                      <MediaImage src={m.photo} alt={m.name} loading="lazy" className="size-24 shrink-0 rounded-xl object-cover" />
                       <div>
                         <h3 className="text-xl font-semibold text-foreground">{m.name}</h3>
                         <p className="text-sm text-muted-foreground">{m.role}</p>

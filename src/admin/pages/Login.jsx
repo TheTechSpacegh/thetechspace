@@ -3,7 +3,7 @@
 // Google/GitHub buttons hand off to the backend's OAuth routes once
 // VITE_API_URL is set (see Backend/PLAN.md); until then they explain why not.
 import { useState } from "react";
-import { useNavigate, useLocation, Link } from "react-router";
+import { useNavigate, useLocation, useSearchParams, Link } from "react-router";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import logo1 from "@/assets/img/logo1.png";
 
 const API_URL = import.meta.env.VITE_API_URL;
+
+// Messages for the ?error= codes the API sends back after Google/GitHub sign-in.
+const OAUTH_ERRORS = {
+    not_allowed: "That account doesn't have access to the admin console. Ask an owner to add your email.",
+    oauth_failed: "Sign-in didn't complete. Please try again.",
+    oauth_cancelled: "Sign-in was cancelled.",
+    oauth_unavailable: "That sign-in option isn't set up yet. Use your email and password.",
+};
 
 const GoogleIcon = () => (
     <svg viewBox="0 0 24 24" className="size-4" aria-hidden="true">
@@ -31,7 +39,8 @@ const GitHubIcon = () => (
 );
 
 export default function Login() {
-    const [oauthNotice, setOauthNotice] = useState("");
+    const [searchParams] = useSearchParams();
+    const [oauthNotice, setOauthNotice] = useState(() => OAUTH_ERRORS[searchParams.get("error")] ?? "");
 
     // Hand off to the backend OAuth route; explain if the backend isn't connected yet.
     const signInWith = (provider) => {
@@ -107,7 +116,7 @@ export default function Login() {
                         <FieldGroup className="gap-5">
                             {error && (
                                 <div role="alert" className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-red-300">
-                                    {error}. Check your details and try again.
+                                    {error}
                                 </div>
                             )}
                             <Field className="gap-1.5">
