@@ -1,6 +1,6 @@
 # Frontend CI: lint + build on every push and pull request.
 #
-# Render deploys the site itself (render.yaml, autoDeployTrigger: checksPass),
+# Railway deploys the site itself (.railway/railway.ts, checkSuites: true),
 # and only after this check passes on main, so a broken build never ships.
 
 name: Frontend
@@ -47,8 +47,8 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          # This build only checks the code; Render builds the deployed site
-          # with its own VITE_API_URL (render.yaml).
+          # This build only checks the code; Railway builds the deployed site
+          # with its own VITE_API_URL (.railway/railway.ts).
           VITE_API_URL: https://api.example.com
 
       - name: Bundle size
