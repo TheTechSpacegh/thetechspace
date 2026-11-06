@@ -20,6 +20,65 @@ import BackendRequired from "../components/content/BackendRequired";
 import { useAuth } from "../contexts/AuthContext";
 
 const EMPTY = { email: "", name: "", role: "EDITOR", password: "" };
+const EMPTY_PASSWORDS = { currentPassword: "", newPassword: "", confirmPassword: "" };
+
+function ChangePassword({ user, onChanged }) {
+  const [form, setForm] = useState(EMPTY_PASSWORDS);
+  const [errors, setErrors] = useState({});
+  const [saving, setSaving] = useState(false);
+  const hasPassword = user.hasPassword !== false;
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (form.newPassword !== form.confirmPassword) {
+      setErrors({ confirmPassword: ["The two new passwords don't match"] });
+      return;
+    }
+    setSaving(true);
+    setErrors({});
+    try {
+      const body = { newPassword: form.newPassword, ...(hasPassword ? { currentPassword: form.currentPassword } : {}) };
+      const { admin } = await api("/api/auth/password", { method: "PUT", body });
+      onChanged(admin);
+      setForm(EMPTY_PASSWORDS);
+      toast.success(hasPassword ? "Password changed. Other devices have been signed out." : "Password set. You can now sign in with it too.");
+    } catch (err) {
+      if (err instanceof ApiError && err.fields) setErrors(err.fields);
+      toast.error(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const field = (name, label, autoComplete, description) => (
+    <Field data-invalid={Boolean(errors[name]) || undefined}>
+      <FieldLabel htmlFor={`account-${name}`}>{label}</FieldLabel>
+      <Input
+        id={`account-${name}`} type="password" autoComplete={autoComplete} value={form[name]}
+        onChange={(e) => setForm({ ...form, [name]: e.target.value })} aria-invalid={Boolean(errors[name]) || undefined}
+      />
+      {description && <FieldDescription>{description}</FieldDescription>}
+      <FieldError errors={errors[name]?.map((message) => ({ message }))} />
+    </Field>
+  );
+
+  return (
+    <form onSubmit={submit} noValidate className="border-t pt-6">
+      <h3 className="mb-1 flex items-center gap-2 font-medium text-foreground"><KeyRound className="size-4 text-primary" aria-hidden="true" /> {hasPassword ? "Change password" : "Set a password"}</h3>
+      <p className="mb-4 text-sm text-muted-foreground">
+        {hasPassword ? "Changing it signs you out everywhere else." : "You sign in with Google or GitHub. A password gives you a second way in."}
+      </p>
+      <FieldGroup className="grid gap-5 sm:grid-cols-3">
+        {hasPassword && field("currentPassword", "Current password", "current-password")}
+        {field("newPassword", "New password", "new-password", "12+ characters.")}
+        {field("confirmPassword", "Confirm new password", "new-password")}
+      </FieldGroup>
+      <Button type="submit" className="mt-5" disabled={saving || !form.newPassword || (hasPassword && !form.currentPassword)}>
+        {saving ? <Loader2 className="animate-spin" /> : <KeyRound />} {hasPassword ? "Change password" : "Set password"}
+      </Button>
+    </form>
+  );
+}
 
 function GoogleMark() {
   return <span aria-hidden="true" className="text-xs font-bold">G</span>;
@@ -176,7 +235,7 @@ function AdminAccess({ me }) {
 }
 
 export default function Settings() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   if (!API_URL) return <BackendRequired icon={SettingsIcon} title="Settings" />;
 
   return (
@@ -190,10 +249,13 @@ export default function Settings() {
         <CardHeader>
           <CardTitle className="text-lg font-medium">Your account</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-wrap items-center gap-x-8 gap-y-3 text-sm">
-          <div><p className="text-muted-foreground">Name</p><p className="font-medium text-foreground">{user.name}</p></div>
-          <div><p className="text-muted-foreground">Email</p><p className="font-medium text-foreground">{user.email}</p></div>
-          <div><p className="text-muted-foreground">Role</p><p className="font-medium text-foreground">{user.roleLabel}</p></div>
+        <CardContent className="flex flex-col gap-6">
+          <div className="flex flex-wrap items-center gap-x-8 gap-y-3 text-sm">
+            <div><p className="text-muted-foreground">Name</p><p className="font-medium text-foreground">{user.name}</p></div>
+            <div><p className="text-muted-foreground">Email</p><p className="font-medium text-foreground">{user.email}</p></div>
+            <div><p className="text-muted-foreground">Role</p><p className="font-medium text-foreground">{user.roleLabel}</p></div>
+          </div>
+          <ChangePassword user={user} onChanged={updateUser} />
         </CardContent>
       </Card>
 
