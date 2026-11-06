@@ -35,7 +35,7 @@ You need a Railway account on the **Hobby** plan or higher; the free trial pause
    | Name | Value |
    |---|---|
    | `JWT_SECRET` | 48+ random characters: `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"`. Mark it **sealed**. |
-   | `API_URL` | The API's public address, e.g. `https://api.thetechspace.com` (or the `*.up.railway.app` domain from step 4) |
+   | `API_URL` | The **site's** public address, the same as `FRONTEND_URL`. The site forwards `/api/*` to the API (see below), so the browser only ever talks to one address. |
    | `FRONTEND_URL` | The site's public address, e.g. `https://thetechspace.com` |
 
    Both services read these, so the site and the API always agree on each other's address. Secrets never go in git.
@@ -44,17 +44,17 @@ You need a Railway account on the **Hobby** plan or higher; the free trial pause
    railway config plan     # preview: check what it will add, change or remove
    railway config apply
    ```
-   Then give each service a public address: either *Settings → Networking → Generate Domain*, or a custom domain (step 6). Put those addresses into `API_URL` and `FRONTEND_URL`, and redeploy both services.
+   Then give each service a public address: either *Settings → Networking → Generate Domain*, or a custom domain (step 6). Put the site's address into both `API_URL` and `FRONTEND_URL`, and redeploy both services.
 5. **Load the content and create your owner account** (from the backend repo):
    ```bash
    railway ssh --service tts_Backend   # opens a shell inside the running API
    SEED_OWNER_EMAIL=you@thetechspace.com SEED_OWNER_PASSWORD="…" npm run db:seed
    ```
    It runs inside Railway because the database is only reachable on its private network. It's safe to re-run. Then sign in at `<site>/admin`.
-6. **Custom domains (strongly recommended):** add `thetechspace.com` to `thetechspace` and `api.thetechspace.com` to `tts_Backend` (*Settings → Networking → Custom Domain*), point the DNS records Railway shows you at them, and update the two shared URLs.
-   - **Why:** browsers treat `thetechspace-production.up.railway.app` and `ttsbackend-production-….up.railway.app` as *unrelated* sites, because `up.railway.app` is a public suffix. On those addresses, admin sign-in relies on cross-site cookies, which Safari and other browsers that block third-party cookies may refuse.
-   - On a shared domain, sign-in uses ordinary same-site cookies and works everywhere.
-   - The API detects which case applies automatically.
+6. **Custom domain (optional):** add `thetechspace.com` to `thetechspace` (*Settings → Networking → Custom Domain*), point the DNS records Railway shows you at it, and set `API_URL` and `FRONTEND_URL` to it. The API needs no domain of its own.
+   - **Why the API sits behind the site:** the site's Caddy forwards `/api/*` to `tts_Backend` over Railway's private network (`API_UPSTREAM`, default `http://ttsbackend.railway.internal:8080`). The sign-in cookie is then first-party.
+   - Served from its own `*.up.railway.app` address instead, the API's cookie counts as third-party (`up.railway.app` is a public suffix), and Safari, Brave, incognito windows and browsers that block third-party cookies drop it: sign-in appears to work, then every request fails and a refresh signs you out.
+   - Update the Google/GitHub callback URLs to `<site>/api/auth/{google,github}/callback`.
 7. **Protect `main`:** under *Settings → Branches* on GitHub, require the **Lint & build** check before merging.
 
 **Created the services in the dashboard instead?** That works, with two settings `railway.ts` would otherwise set for you:

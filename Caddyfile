@@ -11,8 +11,10 @@
 	}
 
 	servers {
-		# Trust Railway's proxy so logs show real client IPs.
+		# Trust Railway's proxy so logs show real client IPs. Strict: read
+		# X-Forwarded-For right to left, so a client can't spoof its IP.
 		trusted_proxies static private_ranges 100.0.0.0/8
+		trusted_proxies_strict
 	}
 }
 
@@ -30,29 +32,42 @@
 		Referrer-Policy "strict-origin-when-cross-origin"
 		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
-		# Scripts only from this site. Images, video and API calls may come from
-		# any https origin (Cloudinary, Unsplash, the API on its own domain).
+		# Scripts only from this site. Images and video may come from any https
+		# origin (Cloudinary, Unsplash).
 		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' https:; connect-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
 		-Server
 	}
 
-	# Vite fingerprints everything in /assets, so it can be cached forever.
-	header /assets/* Cache-Control "public, max-age=31536000, immutable"
-
-	# The admin console should never appear in search results.
-	header /admin* X-Robots-Tag "noindex, nofollow"
-
-	# Railpack copies the build to /app/dist. SITE_ROOT only exists to test
-	# this file locally (SITE_ROOT=dist caddy run).
-	root * {$SITE_ROOT:/app/dist}
-
 	encode zstd gzip
 
-	# Real files first; every other path falls back to index.html so React
-	# Router can handle it.
-	try_files {path} {path}/index.html /index.html
+	# The API, served from this site's own address over Railway's private
+	# network. The browser then sees one site, so the admin sign-in cookie is
+	# first-party and works in every browser (Safari and others block
+	# cookies from a separate *.up.railway.app API as third-party).
+	handle /api/* {
+		reverse_proxy {$API_UPSTREAM:http://ttsbackend.railway.internal:8080} {
+			# One clean client IP for the API's rate limits (it trusts one proxy).
+			header_up X-Forwarded-For {client_ip}
+		}
+	}
 
-	file_server {
-		hide .git .env*
+	handle {
+		# Vite fingerprints everything in /assets, so it can be cached forever.
+		header /assets/* Cache-Control "public, max-age=31536000, immutable"
+
+		# The admin console should never appear in search results.
+		header /admin* X-Robots-Tag "noindex, nofollow"
+
+		# Railpack copies the build to /app/dist. SITE_ROOT only exists to test
+		# this file locally (SITE_ROOT=dist caddy run).
+		root * {$SITE_ROOT:/app/dist}
+
+		# Real files first; every other path falls back to index.html so React
+		# Router can handle it.
+		try_files {path} {path}/index.html /index.html
+
+		file_server {
+			hide .git .env*
+		}
 	}
 }
