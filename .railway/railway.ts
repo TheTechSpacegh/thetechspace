@@ -6,6 +6,8 @@
 // This repository owns only the site. The API and database are a separate
 // partial in the backend repo (TheTechSpacegh/tts_Backend); both target the
 // same Railway project. See .github/DEPLOYMENT.md.
+// Names match the services already created in the dashboard, so applying
+// this file updates them in place instead of adding a second set.
 import { defineRailway, github, project, service } from "railway/iac";
 
 export const partial = "site";
@@ -13,7 +15,7 @@ export const partial = "site";
 const REGION = "europe-west4"; // EU West (Amsterdam), same as the API
 
 export default defineRailway((ctx) => {
-  const site = service("tts-site", {
+  const site = service("thetechspace", {
     // checkSuites: deploy a commit only after "Lint & build" passes on GitHub.
     source: github("TheTechSpacegh/thetechspace", { branch: "main", checkSuites: true }),
     // Railpack detects Vite, runs `npm run build` and serves dist/ with Caddy,
@@ -27,5 +29,5 @@ export default defineRailway((ctx) => {
     },
   });
 
-  return project("TheTechSpace", { resources: [site] });
+  return project("the Tech space", { resources: [site] });
 });

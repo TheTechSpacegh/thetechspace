@@ -1,16 +1,16 @@
 # Deploying
 
-The site, the API and the database run in one [Railway](https://railway.com) project, **TheTechSpace**:
+The site, the API and the database run in one [Railway](https://railway.com) project, **the Tech space**:
 
 | Piece | Railway service | Defined in |
 |---|---|---|
-| Public site + admin console | `tts-site` (Vite build served by Caddy) | `.railway/railway.ts` + `Caddyfile` in this repo |
-| API | `tts-api` (Node) | `.railway/railway.ts` in the backend repo |
-| Database | `tts-db` (PostgreSQL 18) | `.railway/railway.ts` in the backend repo |
+| Public site + admin console | `thetechspace` (Vite build served by Caddy) | `.railway/railway.ts` + `Caddyfile` in this repo |
+| API | `tts_Backend` (Node) | `.railway/railway.ts` in the backend repo |
+| Database | `Postgres` (PostgreSQL 18) | `.railway/railway.ts` in the backend repo |
 
 All three run in EU West (Amsterdam), Railway's closest region to Ghana.
 
-**Do you need to add a database?** Yes. The backend repo's `.railway/railway.ts` creates it for you (`tts-db`), and it connects the API to it automatically over Railway's private network. A new database starts empty; step 5 below loads your content.
+**Do you need to add a database?** Yes. The backend repo's `.railway/railway.ts` creates it for you (`Postgres`), and it connects the API to it automatically over Railway's private network. A new database starts empty; step 5 below loads your content.
 
 ## What happens on each push
 
@@ -29,7 +29,7 @@ You need a Railway account on the **Hobby** plan or higher; the free trial pause
    npm i -g @railway/cli@latest
    railway login
    ```
-2. **Create the project:** in the dashboard, choose *New Project → Empty Project* and name it **TheTechSpace**. In each repo, run `railway link` and pick that project.
+2. **Create the project:** in the dashboard, choose *New Project → Empty Project* and name it **the Tech space**. In each repo, run `railway link` and pick that project.
 3. **Add the shared variables:** under *Project → Settings → Shared Variables* (environment: production), add:
 
    | Name | Value |
@@ -39,23 +39,31 @@ You need a Railway account on the **Hobby** plan or higher; the free trial pause
    | `FRONTEND_URL` | The site's public address, e.g. `https://thetechspace.com` |
 
    Both services read these, so the site and the API always agree on each other's address. Secrets never go in git.
-4. **Create the services:** apply the backend repo first (it creates `tts-db` and `tts-api`), then this one (`tts-site`):
+4. **Create the services:** apply the backend repo first (it creates `Postgres` and `tts_Backend`), then this one (`thetechspace`):
    ```bash
-   railway config plan     # preview: should only add services
+   railway config plan     # preview: check what it will add, change or remove
    railway config apply
    ```
    Then give each service a public address: either *Settings → Networking → Generate Domain*, or a custom domain (step 6). Put those addresses into `API_URL` and `FRONTEND_URL`, and redeploy both services.
 5. **Load the content and create your owner account** (from the backend repo):
    ```bash
-   railway ssh --service tts-api   # opens a shell inside the running API
+   railway ssh --service tts_Backend   # opens a shell inside the running API
    SEED_OWNER_EMAIL=you@thetechspace.com SEED_OWNER_PASSWORD="…" npm run db:seed
    ```
    It runs inside Railway because the database is only reachable on its private network. It's safe to re-run. Then sign in at `<site>/admin`.
-6. **Custom domains (strongly recommended):** add `thetechspace.com` to `tts-site` and `api.thetechspace.com` to `tts-api` (*Settings → Networking → Custom Domain*), point the DNS records Railway shows you at them, and update the two shared URLs.
-   - **Why:** browsers treat `tts-site.up.railway.app` and `tts-api.up.railway.app` as *unrelated* sites, because `up.railway.app` is a public suffix. On those addresses, admin sign-in relies on cross-site cookies, which Safari and other browsers that block third-party cookies may refuse.
+6. **Custom domains (strongly recommended):** add `thetechspace.com` to `thetechspace` and `api.thetechspace.com` to `tts_Backend` (*Settings → Networking → Custom Domain*), point the DNS records Railway shows you at them, and update the two shared URLs.
+   - **Why:** browsers treat `thetechspace-production.up.railway.app` and `ttsbackend-production-….up.railway.app` as *unrelated* sites, because `up.railway.app` is a public suffix. On those addresses, admin sign-in relies on cross-site cookies, which Safari and other browsers that block third-party cookies may refuse.
    - On a shared domain, sign-in uses ordinary same-site cookies and works everywhere.
    - The API detects which case applies automatically.
 7. **Protect `main`:** under *Settings → Branches* on GitHub, require the **Lint & build** check before merging.
+
+**Created the services in the dashboard instead?** That works, with two settings `railway.ts` would otherwise set for you:
+- On `tts_Backend` → *Settings → Deploy*, set **Pre-deploy Command** to `npm run db:deploy`. Without it the database never gets its tables, and the seed fails with "table … does not exist".
+- Set the **Healthcheck Path** to `/api/health` on `tts_Backend` and `/health` on `thetechspace`.
+
+**Before your first `railway config apply` on a project set up by hand:**
+- Run `railway config plan` and read it. It should only *change* the existing services. If it plans to *create* `thetechspace`, `tts_Backend` or `Postgres`, stop: a name doesn't match.
+- Apply removes variables the file doesn't list. Move `JWT_SECRET`, `API_URL` and `FRONTEND_URL` into **shared variables** first (step 3), because the file references them from there.
 
 To change infrastructure later, edit `.railway/railway.ts` and run `railway config plan` / `apply` again. Railway doesn't read the file during deploys; it only takes effect when you apply it.
 
