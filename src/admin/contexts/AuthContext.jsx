@@ -83,8 +83,11 @@ export function AuthProvider({ children }) {
         }
     }, []);
 
+    // For screens that change the signed-in admin (e.g. setting a password).
+    const updateUser = useCallback((admin) => setUser(toUser(admin)), []);
+
     return (
-        <AuthContext.Provider value={{ user, loading, login, logout, ensureSession, isAuthenticated: !!user }}>
+        <AuthContext.Provider value={{ user, loading, login, logout, ensureSession, updateUser, isAuthenticated: !!user }}>
             {children}
         </AuthContext.Provider>
     );
