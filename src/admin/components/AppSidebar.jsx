@@ -2,19 +2,7 @@
 // dashboard-shell-01 (app-sidebar + nav-main) for React Router.
 import { useEffect } from "react";
 import { Link, useLocation } from "react-router";
-import {
-  LayoutDashboard,
-  FileText,
-  Users,
-  Briefcase,
-  MessageSquare,
-  Settings,
-  HelpCircle,
-  Milestone,
-  ExternalLink,
-  FolderKanban,
-  Quote,
-} from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -32,30 +20,8 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useUnreadCount } from "../hooks/useUnreadCount";
+import { nav } from "../lib/nav";
 import logo1 from "@/assets/img/logo1.png";
-
-const nav = [
-  {
-    label: "Content",
-    items: [
-      { title: "Overview", href: "/admin", icon: LayoutDashboard, exact: true },
-      { title: "Posts", href: "/admin/posts", icon: FileText },
-      { title: "Team", href: "/admin/team", icon: Users },
-      { title: "Services", href: "/admin/services", icon: Briefcase },
-      { title: "Projects", href: "/admin/projects", icon: FolderKanban },
-      { title: "Testimonials", href: "/admin/testimonials", icon: Quote },
-      { title: "Milestones", href: "/admin/milestones", icon: Milestone },
-      { title: "Messages", href: "/admin/contacts", icon: MessageSquare, badge: "unread" },
-    ],
-  },
-  {
-    label: "System",
-    items: [
-      { title: "Settings", href: "/admin/settings", icon: Settings },
-      { title: "Help Center", href: "/admin/help", icon: HelpCircle },
-    ],
-  },
-];
 
 export default function AppSidebar() {
   const { pathname } = useLocation();

@@ -42,10 +42,10 @@ export function AuthProvider({ children }) {
         setLoading(false);
     }, []);
 
-    const login = useCallback(async (email, password) => {
+    const login = useCallback(async (email, password, remember = true) => {
         if (API_URL) {
             try {
-                const body = await api("/api/auth/login", { method: "POST", body: { email, password } });
+                const body = await api("/api/auth/login", { method: "POST", body: { email, password, remember } });
                 checked.current = true;
                 setUser(toUser(body.admin));
                 setLoading(false);

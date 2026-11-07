@@ -1,6 +1,6 @@
 // Admin: your account, and (for owners) who can sign in to the console.
 import { useCallback, useEffect, useState } from "react";
-import { KeyRound, Loader2, Settings as SettingsIcon, ShieldCheck, Trash2, UserPlus } from "lucide-react";
+import { KeyRound, Loader2, MailPlus, Settings as SettingsIcon, ShieldCheck, Trash2, UserPlus } from "lucide-react";
 // lucide-react 1.x dropped brand icons, so the GitHub mark comes from react-icons.
 import { FaGithub } from "react-icons/fa";
 import { toast } from "sonner";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
@@ -21,6 +22,18 @@ import { useAuth } from "../contexts/AuthContext";
 
 const EMPTY = { email: "", name: "", role: "EDITOR", password: "" };
 const EMPTY_PASSWORDS = { currentPassword: "", newPassword: "", confirmPassword: "" };
+const LOGIN_URL = `${window.location.origin}/admin/login`;
+
+// Tells the owner whether the invite email went out, and what to do if not.
+function announceInvite(email, invite, { resend = false } = {}) {
+  if (invite?.sent) {
+    toast.success(resend ? `Invite sent again to ${email}` : `${email} can now sign in. We've emailed them how.`);
+  } else if (invite?.reason === "send_failed") {
+    toast.warning(`${resend ? "" : `${email} can now sign in, but `}the invite email didn't send. Try again, or send them ${LOGIN_URL} yourself.`);
+  } else {
+    toast.info(`${resend ? "" : `${email} can now sign in. `}Email isn't set up yet, so let them know yourself: ${LOGIN_URL}`, { duration: 10000 });
+  }
+}
 
 function ChangePassword({ user, onChanged }) {
   const [form, setForm] = useState(EMPTY_PASSWORDS);
@@ -53,8 +66,8 @@ function ChangePassword({ user, onChanged }) {
   const field = (name, label, autoComplete, description) => (
     <Field data-invalid={Boolean(errors[name]) || undefined}>
       <FieldLabel htmlFor={`account-${name}`}>{label}</FieldLabel>
-      <Input
-        id={`account-${name}`} type="password" autoComplete={autoComplete} value={form[name]}
+      <PasswordInput
+        id={`account-${name}`} autoComplete={autoComplete} value={form[name]}
         onChange={(e) => setForm({ ...form, [name]: e.target.value })} aria-invalid={Boolean(errors[name]) || undefined}
       />
       {description && <FieldDescription>{description}</FieldDescription>}
@@ -116,8 +129,8 @@ function AdminAccess({ me }) {
     setErrors({});
     try {
       const body = { email: form.email, name: form.name, role: form.role, ...(form.password ? { password: form.password } : {}) };
-      const { admin } = await api("/api/admin/users", { method: "POST", body });
-      toast.success(`${admin.email} can now sign in`);
+      const { admin, invite } = await api("/api/admin/users", { method: "POST", body });
+      announceInvite(admin.email, invite);
       setForm(EMPTY);
       load();
     } catch (err) {
@@ -125,6 +138,19 @@ function AdminAccess({ me }) {
       toast.error(err.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const [resending, setResending] = useState(null);
+  const resendInvite = async (admin) => {
+    setResending(admin.id);
+    try {
+      const { invite } = await api(`/api/admin/users/${admin.id}/invite`, { method: "POST" });
+      announceInvite(admin.email, invite, { resend: true });
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setResending(null);
     }
   };
 
@@ -157,7 +183,7 @@ function AdminAccess({ me }) {
               <TableHead className="pl-6">Person</TableHead>
               <TableHead>Role</TableHead>
               <TableHead className="hidden md:table-cell">Signs in with</TableHead>
-              <TableHead className="w-16 pr-6"><span className="sr-only">Actions</span></TableHead>
+              <TableHead className="w-24 pr-6"><span className="sr-only">Actions</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -171,9 +197,14 @@ function AdminAccess({ me }) {
                 <TableCell className="hidden md:table-cell"><SignInMethods signIn={a.signIn} /></TableCell>
                 <TableCell className="pr-6 text-right">
                   {a.id !== me.id && (
-                    <Button variant="ghost" size="icon" className="size-8 text-muted-foreground hover:text-destructive" onClick={() => setConfirming(a)} aria-label={`Remove ${a.email}`}>
-                      <Trash2 />
-                    </Button>
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="icon" className="size-8 text-muted-foreground hover:text-foreground" onClick={() => resendInvite(a)} disabled={resending === a.id} aria-label={`Resend invite to ${a.email}`} title="Resend invite">
+                        {resending === a.id ? <Loader2 className="animate-spin" /> : <MailPlus />}
+                      </Button>
+                      <Button variant="ghost" size="icon" className="size-8 text-muted-foreground hover:text-destructive" onClick={() => setConfirming(a)} aria-label={`Remove ${a.email}`} title="Remove access">
+                        <Trash2 />
+                      </Button>
+                    </div>
                   )}
                 </TableCell>
               </TableRow>
@@ -207,7 +238,7 @@ function AdminAccess({ me }) {
             </Field>
             <Field data-invalid={Boolean(errors.password) || undefined}>
               <FieldLabel htmlFor="new-admin-password">Password (optional)</FieldLabel>
-              <Input id="new-admin-password" type="password" autoComplete="new-password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} aria-invalid={Boolean(errors.password) || undefined} />
+              <PasswordInput id="new-admin-password" autoComplete="new-password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} aria-invalid={Boolean(errors.password) || undefined} />
               <FieldDescription>Leave empty if they'll only use Google or GitHub. 12+ characters.</FieldDescription>
               <FieldError errors={fieldErrors("password")} />
             </Field>

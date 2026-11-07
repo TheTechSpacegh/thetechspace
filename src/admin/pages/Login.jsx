@@ -2,7 +2,8 @@
 // with concentric rings) using shadcn/ui Card, Field, Input and Checkbox.
 // Google/GitHub buttons hand off to the backend's OAuth routes once
 // VITE_API_URL is set (see Backend/PLAN.md); until then they explain why not.
-import { useState } from "react";
+// With the backend connected, only the providers it has keys for are shown.
+import { useEffect, useState } from "react";
 import { useNavigate, useLocation, useSearchParams, Link } from "react-router";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
@@ -10,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldGroup, FieldLabel, FieldSeparator } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
+import { api } from "@/lib/api";
 import { Checkbox } from "@/components/ui/checkbox";
 import logo1 from "@/assets/img/logo1.png";
 
@@ -39,8 +42,27 @@ const GitHubIcon = () => (
 );
 
 export default function Login() {
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [oauthNotice, setOauthNotice] = useState(() => OAUTH_ERRORS[searchParams.get("error")] ?? "");
+    // null until the API answers; both buttons show meanwhile.
+    const [providers, setProviders] = useState(null);
+
+    // The message is on screen; drop ?error= so a refresh doesn't repeat it.
+    useEffect(() => {
+        if (searchParams.has("error")) setSearchParams({}, { replace: true });
+    }, [searchParams, setSearchParams]);
+
+    useEffect(() => {
+        if (!API_URL) return;
+        const controller = new AbortController();
+        api("/api/auth/providers", { signal: controller.signal }).then(setProviders).catch(() => {});
+        return () => controller.abort();
+    }, []);
+
+    const socialButtons = [
+        { id: "google", label: "Continue with Google", Icon: GoogleIcon },
+        { id: "github", label: "Continue with GitHub", Icon: GitHubIcon },
+    ].filter((b) => !providers || providers[b.id]);
 
     // Hand off to the backend OAuth route; explain if the backend isn't connected yet.
     const signInWith = (provider) => {
@@ -52,6 +74,7 @@ export default function Login() {
     };
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [remember, setRemember] = useState(true);
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
     const { login } = useAuth();
@@ -64,7 +87,7 @@ export default function Login() {
         e.preventDefault();
         setError("");
         setLoading(true);
-        const result = await login(email, password);
+        const result = await login(email, password, remember);
         if (result.success) {
             navigate(from, { replace: true });
         } else {
@@ -96,22 +119,25 @@ export default function Login() {
                 </CardHeader>
                 <CardContent className="p-0">
                     {/* login-01 social row, as pills */}
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <Button type="button" variant="outline" onClick={() => signInWith("google")} className="h-11 gap-2 rounded-full bg-background text-sm font-medium text-card-foreground">
-                            <GoogleIcon /> Continue with Google
-                        </Button>
-                        <Button type="button" variant="outline" onClick={() => signInWith("github")} className="h-11 gap-2 rounded-full bg-background text-sm font-medium text-card-foreground">
-                            <GitHubIcon /> Continue with GitHub
-                        </Button>
-                    </div>
+                    {socialButtons.length > 0 && (
+                        <div className={`grid grid-cols-1 gap-3 ${socialButtons.length > 1 ? "sm:grid-cols-2" : ""}`}>
+                            {socialButtons.map(({ id, label, Icon }) => (
+                                <Button key={id} type="button" variant="outline" onClick={() => signInWith(id)} className="h-11 gap-2 rounded-full bg-background text-sm font-medium text-card-foreground">
+                                    <Icon /> {label}
+                                </Button>
+                            ))}
+                        </div>
+                    )}
                     {oauthNotice && (
-                        <p role="status" className="mt-3 rounded-lg border border-primary/30 bg-primary/10 px-4 py-2.5 text-center text-xs text-violet-200">
+                        <p role="status" className={`${socialButtons.length > 0 ? "mt-3" : "mb-6"} rounded-lg border border-primary/30 bg-primary/10 px-4 py-2.5 text-center text-xs text-violet-200`}>
                             {oauthNotice}
                         </p>
                     )}
-                    <FieldSeparator className="my-6 text-sm text-muted-foreground *:data-[slot=field-separator-content]:bg-card">
-                        or sign in with email
-                    </FieldSeparator>
+                    {socialButtons.length > 0 && (
+                        <FieldSeparator className="my-6 text-sm text-muted-foreground *:data-[slot=field-separator-content]:bg-card">
+                            or sign in with email
+                        </FieldSeparator>
+                    )}
                     <form onSubmit={handleSubmit}>
                         <FieldGroup className="gap-5">
                             {error && (
@@ -135,10 +161,9 @@ export default function Login() {
                             </Field>
                             <Field className="gap-1.5">
                                 <FieldLabel htmlFor="login-password" className="text-sm font-normal text-muted-foreground">Password</FieldLabel>
-                                <Input
+                                <PasswordInput
                                     id="login-password"
                                     name="password"
-                                    type="password"
                                     autoComplete="current-password"
                                     placeholder="Enter your password"
                                     value={password}
@@ -148,8 +173,8 @@ export default function Login() {
                                 />
                             </Field>
                             <Field orientation="horizontal" className="items-center gap-2.5">
-                                <Checkbox id="remember" defaultChecked />
-                                <FieldLabel htmlFor="remember" className="text-sm font-normal text-muted-foreground">Keep me signed in</FieldLabel>
+                                <Checkbox id="remember" checked={remember} onCheckedChange={(v) => setRemember(v === true)} />
+                                <FieldLabel htmlFor="remember" className="text-sm font-normal text-muted-foreground">Keep me signed in for 7 days</FieldLabel>
                             </Field>
                             <Button type="submit" disabled={loading} className="h-10 w-full rounded-lg">
                                 {loading && <Loader2 className="animate-spin" aria-hidden="true" />}
@@ -159,7 +184,7 @@ export default function Login() {
                     </form>
 
                     {/* Mock auth helper: never rendered in production builds. */}
-                    {import.meta.env.DEV && (
+                    {import.meta.env.DEV && !API_URL && (
                         <p className="mt-6 rounded-lg border border-dashed px-4 py-3 text-center font-mono text-xs text-muted-foreground">
                             dev only · admin@thetechspace.com / admin123
                         </p>

@@ -32,6 +32,18 @@ export function timeAgo(iso, now = Date.now()) {
   return days < 7 ? `${days}d ago` : dateLabel(iso);
 }
 
+// A contact-form message as the dashboard and the header bell show it.
+export const toMessagePreview = (m, i) => ({
+  id: m.id,
+  name: `${m.firstName} ${m.lastName}`,
+  email: m.email,
+  message: m.details,
+  time: timeAgo(m.createdAt),
+  initials: `${m.firstName[0] ?? ""}${m.lastName[0] ?? ""}`.toUpperCase(),
+  color: AVATAR_COLORS[i % AVATAR_COLORS.length],
+  read: m.read,
+});
+
 const SAMPLE = {
   live: false,
   stats: { totalPosts: mockStats.totalPosts, teamMembers: mockStats.teamMembers, activeServices: mockStats.activeServices },
@@ -53,16 +65,7 @@ function fromApi(stats, inbox, posts) {
       }
       return row;
     }),
-    messages: inbox.messages.slice(0, 5).map((m, i) => ({
-      id: m.id,
-      name: `${m.firstName} ${m.lastName}`,
-      email: m.email,
-      message: m.details,
-      time: timeAgo(m.createdAt),
-      initials: `${m.firstName[0] ?? ""}${m.lastName[0] ?? ""}`.toUpperCase(),
-      color: AVATAR_COLORS[i % AVATAR_COLORS.length],
-      read: m.read,
-    })),
+    messages: inbox.messages.slice(0, 5).map(toMessagePreview),
     unread: stats.messages.unread,
     totalMessages: stats.messages.total,
     posts: posts.posts.slice(0, 5).map((p) => ({
