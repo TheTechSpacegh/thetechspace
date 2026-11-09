@@ -1,6 +1,6 @@
 // Admin: your account, and (for owners) who can sign in to the console.
 import { useCallback, useEffect, useState } from "react";
-import { KeyRound, Loader2, MailPlus, Settings as SettingsIcon, ShieldCheck, Trash2, UserPlus } from "lucide-react";
+import { KeyRound, Loader2, MailPlus, Pencil, Settings as SettingsIcon, ShieldCheck, Trash2, UserPlus } from "lucide-react";
 // lucide-react 1.x dropped brand icons, so the GitHub mark comes from react-icons.
 import { FaGithub } from "react-icons/fa";
 import { toast } from "sonner";
@@ -11,6 +11,7 @@ import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/c
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
@@ -111,12 +112,131 @@ function SignInMethods({ signIn }) {
   );
 }
 
-function AdminAccess({ me }) {
+// Your own name, saved in place; the button appears once it changes.
+function NameField({ user, onChanged }) {
+  const [name, setName] = useState(user.name);
+  const [error, setError] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const dirty = name.trim() !== user.name;
+
+  const save = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    try {
+      const { admin } = await api("/api/auth/me", { method: "PATCH", body: { name } });
+      onChanged(admin);
+      setName(admin.name);
+      toast.success("Name updated");
+    } catch (err) {
+      setError(err instanceof ApiError && err.fields?.name ? err.fields.name[0] : err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <form onSubmit={save} noValidate>
+      <Field data-invalid={Boolean(error) || undefined}>
+        <FieldLabel htmlFor="account-name">Name</FieldLabel>
+        <div className="flex gap-2">
+          <Input id="account-name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} aria-invalid={Boolean(error) || undefined} />
+          {dirty && (
+            <Button type="submit" variant="secondary" disabled={saving}>
+              {saving && <Loader2 className="animate-spin" />} Save
+            </Button>
+          )}
+        </div>
+        <FieldError errors={error ? [{ message: error }] : undefined} />
+      </Field>
+    </form>
+  );
+}
+
+// Side panel for one admin: name, role and (for others) a new password.
+function EditAdmin({ admin, me, onClose, onSaved }) {
+  const [form, setForm] = useState({ name: admin.name, role: admin.role, password: "" });
+  const [errors, setErrors] = useState({});
+  const [saving, setSaving] = useState(false);
+  const isMe = admin.id === me.id;
+
+  const save = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setErrors({});
+    try {
+      const changes = {
+        ...(form.name.trim() !== admin.name ? { name: form.name } : {}),
+        ...(form.role !== admin.role ? { role: form.role } : {}),
+      };
+      if (Object.keys(changes).length) await api(`/api/admin/users/${admin.id}`, { method: "PATCH", body: changes });
+      if (form.password) await api(`/api/admin/users/${admin.id}/password`, { method: "PUT", body: { password: form.password } });
+      toast.success(form.password ? `Saved. ${admin.name} has been signed out; share the new password with them.` : "Saved");
+      onSaved({ selfChanged: isMe && Object.keys(changes).length > 0 });
+    } catch (err) {
+      if (err instanceof ApiError && err.fields) setErrors(err.fields);
+      toast.error(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const fieldErrors = (name) => errors[name]?.map((message) => ({ message }));
+
+  return (
+    <Sheet open onOpenChange={(o) => !o && !saving && onClose()}>
+      <SheetContent className="flex w-full flex-col gap-0 sm:max-w-md">
+        <form onSubmit={save} noValidate className="flex min-h-0 flex-1 flex-col">
+          <SheetHeader className="border-b">
+            <SheetTitle>Edit {isMe ? "your access" : admin.name}</SheetTitle>
+            <SheetDescription>{admin.email}</SheetDescription>
+          </SheetHeader>
+          <FieldGroup className="flex-1 gap-5 overflow-y-auto p-4">
+            <Field data-invalid={Boolean(errors.name) || undefined}>
+              <FieldLabel htmlFor="edit-admin-name">Name</FieldLabel>
+              <Input id="edit-admin-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} aria-invalid={Boolean(errors.name) || undefined} />
+              <FieldError errors={fieldErrors("name")} />
+            </Field>
+            <Field data-invalid={Boolean(errors.role) || undefined}>
+              <FieldLabel htmlFor="edit-admin-role">Role</FieldLabel>
+              <Select value={form.role} onValueChange={(role) => setForm({ ...form, role })}>
+                <SelectTrigger id="edit-admin-role" className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="EDITOR">Editor: manages content</SelectItem>
+                  <SelectItem value="OWNER">Owner: also manages access</SelectItem>
+                </SelectContent>
+              </Select>
+              {isMe && form.role === "EDITOR" && admin.role === "OWNER" && (
+                <FieldDescription>You'll lose access to this page once you save.</FieldDescription>
+              )}
+              <FieldError errors={fieldErrors("role")} />
+            </Field>
+            {!isMe && (
+              <Field data-invalid={Boolean(errors.password) || undefined} className="border-t pt-5">
+                <FieldLabel htmlFor="edit-admin-password">Set a new password (optional)</FieldLabel>
+                <PasswordInput id="edit-admin-password" autoComplete="new-password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} aria-invalid={Boolean(errors.password) || undefined} />
+                <FieldDescription>For someone who's locked out. 12+ characters. It signs them out everywhere; share it with them yourself.</FieldDescription>
+                <FieldError errors={fieldErrors("password")} />
+              </Field>
+            )}
+          </FieldGroup>
+          <SheetFooter className="flex-row justify-end border-t">
+            <Button type="button" variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
+            <Button type="submit" disabled={saving}>{saving && <Loader2 className="animate-spin" />} Save</Button>
+          </SheetFooter>
+        </form>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function AdminAccess({ me, onSelfChanged }) {
   const [admins, setAdmins] = useState(null);
   const [form, setForm] = useState(EMPTY);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [confirming, setConfirming] = useState(null);
+  const [editing, setEditing] = useState(null);
 
   const load = useCallback(() => api("/api/admin/users").then((b) => setAdmins(b.admins)).catch((err) => toast.error(err.message)), []);
   useEffect(() => {
@@ -183,7 +303,7 @@ function AdminAccess({ me }) {
               <TableHead className="pl-6">Person</TableHead>
               <TableHead>Role</TableHead>
               <TableHead className="hidden md:table-cell">Signs in with</TableHead>
-              <TableHead className="w-24 pr-6"><span className="sr-only">Actions</span></TableHead>
+              <TableHead className="w-32 pr-6"><span className="sr-only">Actions</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -196,16 +316,21 @@ function AdminAccess({ me }) {
                 <TableCell><Badge variant={a.role === "OWNER" ? "default" : "secondary"}>{a.role === "OWNER" ? "Owner" : "Editor"}</Badge></TableCell>
                 <TableCell className="hidden md:table-cell"><SignInMethods signIn={a.signIn} /></TableCell>
                 <TableCell className="pr-6 text-right">
-                  {a.id !== me.id && (
-                    <div className="flex justify-end gap-1">
+                  <div className="flex justify-end gap-1">
+                    <Button variant="ghost" size="icon" className="size-8 text-muted-foreground hover:text-foreground" onClick={() => setEditing(a)} aria-label={`Edit ${a.email}`} title="Edit">
+                      <Pencil />
+                    </Button>
+                    {a.id !== me.id && (
+                      <>
                       <Button variant="ghost" size="icon" className="size-8 text-muted-foreground hover:text-foreground" onClick={() => resendInvite(a)} disabled={resending === a.id} aria-label={`Resend invite to ${a.email}`} title="Resend invite">
                         {resending === a.id ? <Loader2 className="animate-spin" /> : <MailPlus />}
                       </Button>
                       <Button variant="ghost" size="icon" className="size-8 text-muted-foreground hover:text-destructive" onClick={() => setConfirming(a)} aria-label={`Remove ${a.email}`} title="Remove access">
                         <Trash2 />
                       </Button>
-                    </div>
-                  )}
+                      </>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -249,6 +374,20 @@ function AdminAccess({ me }) {
         </form>
       </CardContent>
 
+      {editing && (
+        <EditAdmin
+          key={editing.id}
+          admin={editing}
+          me={me}
+          onClose={() => setEditing(null)}
+          onSaved={({ selfChanged }) => {
+            setEditing(null);
+            if (selfChanged) onSelfChanged();
+            else load();
+          }}
+        />
+      )}
+
       <AlertDialog open={Boolean(confirming)} onOpenChange={(o) => !o && setConfirming(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -267,6 +406,8 @@ function AdminAccess({ me }) {
 
 export default function Settings() {
   const { user, updateUser } = useAuth();
+  // After editing your own name or role in the admin list.
+  const refreshMe = () => api("/api/auth/me").then((b) => updateUser(b.admin)).catch(() => {});
   if (!API_URL) return <BackendRequired icon={SettingsIcon} title="Settings" />;
 
   return (
@@ -281,17 +422,17 @@ export default function Settings() {
           <CardTitle className="text-lg font-medium">Your account</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
-          <div className="flex flex-wrap items-center gap-x-8 gap-y-3 text-sm">
-            <div><p className="text-muted-foreground">Name</p><p className="font-medium text-foreground">{user.name}</p></div>
-            <div><p className="text-muted-foreground">Email</p><p className="font-medium text-foreground">{user.email}</p></div>
-            <div><p className="text-muted-foreground">Role</p><p className="font-medium text-foreground">{user.roleLabel}</p></div>
+          <div className="grid items-start gap-x-8 gap-y-4 text-sm sm:grid-cols-[minmax(0,20rem)_auto_auto]">
+            <NameField key={user.name} user={user} onChanged={updateUser} />
+            <div><p className="font-medium text-foreground">Email</p><p className="mt-2.5 text-muted-foreground">{user.email}</p></div>
+            <div><p className="font-medium text-foreground">Role</p><p className="mt-2.5 text-muted-foreground">{user.roleLabel}</p></div>
           </div>
           <ChangePassword user={user} onChanged={updateUser} />
         </CardContent>
       </Card>
 
       {user.role === "OWNER" ? (
-        <AdminAccess me={user} />
+        <AdminAccess key={`${user.role}-${user.name}`} me={user} onSelfChanged={refreshMe} />
       ) : (
         <Card className="rounded-2xl">
           <CardContent className="text-sm text-muted-foreground">Only owners can add or remove people. Ask an owner if someone needs access.</CardContent>

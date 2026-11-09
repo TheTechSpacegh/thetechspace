@@ -2,7 +2,8 @@
 // and a delete confirmation, driven by a config from src/admin/lib/resources.js.
 // Built from shadcn/ui Table, Sheet, AlertDialog and Tabs (Shadcn Space
 // dashboard-shell-01 table pattern).
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router";
 import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,34 @@ export default function ResourceManager({ config }) {
   const [saving, setSaving] = useState(false);
   const [opening, setOpening] = useState(null);
   const [confirming, setConfirming] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const editId = searchParams.get("edit");
+  const { getOne } = resource;
+
+  // Opens one item straight from a link (the header search adds ?edit=<id>).
+  const openById = useCallback(
+    async (id) => {
+      try {
+        const item = await getOne(id);
+        setErrors({});
+        setSlugLocked(true);
+        setValues(toFormValues(config.fields, item, config.defaults));
+        setEditing({ item });
+      } catch {
+        toast.error(`That ${config.singular.toLowerCase()} couldn't be found. It may have been deleted.`);
+      }
+    },
+    [getOne, config],
+  );
+
+  useEffect(() => {
+    if (!editId || !API_URL) return;
+    setSearchParams((params) => {
+      params.delete("edit");
+      return params;
+    }, { replace: true });
+    openById(editId);
+  }, [editId, openById, setSearchParams]);
 
   if (!API_URL) return <BackendRequired icon={config.icon} title={config.title} />;
 
